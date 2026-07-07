@@ -177,14 +177,67 @@ h1{font-size:20px;font-weight:700}
 <!-- Edit modal -->
 <div id="emod" class="mo" style="display:none" onclick="if(event.target===this)closeEdit()">
   <div class="md">
-    <h2>Update Account</h2>
-    <div class="fi"><label>Balance ($)</label><input id="eb" type="number" inputmode="decimal"></div>
-    <div class="fi"><label>Drawdown Floor ($)</label><input id="ef" type="number" inputmode="decimal"></div>
-    <div class="fi"><label>Max Daily Loss ($)</label><input id="ed" type="number" inputmode="decimal"></div>
-    <div class="fi"><label>Pass Target ($)</label><input id="et" type="number" inputmode="decimal"></div>
+    <h2 id="emod-title">Update Account</h2>
+    <div class="fi"><label>Firm Name</label><input id="ea-firm" type="text" placeholder="e.g. Tradeify"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi"><label>Account Size ($)</label><input id="ea-size" type="number" inputmode="decimal"></div>
+      <div class="fi"><label>Current Balance ($)</label><input id="eb" type="number" inputmode="decimal"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi"><label>Drawdown Floor ($)</label><input id="ef" type="number" inputmode="decimal"></div>
+      <div class="fi"><label>Max Daily Loss ($)</label><input id="ed" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="fi"><label>Pass Target Balance ($)</label><input id="et" type="number" inputmode="decimal"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="fi"><label>Contracts</label><input id="ea-ct" type="number" inputmode="decimal" min="1"></div>
+      <div class="fi"><label>TP Low ATR (pts)</label><input id="ea-tpl" type="number" inputmode="decimal"></div>
+      <div class="fi"><label>SL Low ATR (pts)</label><input id="ea-sll" type="number" inputmode="decimal"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi"><label>TP High ATR (pts)</label><input id="ea-tph" type="number" inputmode="decimal"></div>
+      <div class="fi"><label>SL High ATR (pts)</label><input id="ea-slh" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="fi"><label>Card Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <div id="color-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
     <div class="mbtns">
-      <button class="mcan" onclick="closeEdit()">Cancel</button>
+      <button class="mcan" id="emod-delete" onclick="deleteAccount()" style="color:var(--red);border-color:rgba(239,68,68,.4)">Remove Account</button>
       <button class="msave" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add account modal -->
+<div id="amod" class="mo" style="display:none" onclick="if(event.target===this)closeAdd()">
+  <div class="md">
+    <h2>Add Account</h2>
+    <div class="fi"><label>Firm Name</label><input id="na-firm" type="text" placeholder="e.g. Tradeify"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi"><label>Account Size ($)</label><input id="na-size" type="number" inputmode="decimal" placeholder="50000"></div>
+      <div class="fi"><label>Starting Balance ($)</label><input id="na-bal" type="number" inputmode="decimal" placeholder="50000"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi"><label>Drawdown Floor ($)</label><input id="na-floor" type="number" inputmode="decimal" placeholder="48000"></div>
+      <div class="fi"><label>Max Daily Loss ($)</label><input id="na-mdl" type="number" inputmode="decimal" placeholder="1000"></div>
+    </div>
+    <div class="fi"><label>Pass Target Balance ($)</label><input id="na-pt" type="number" inputmode="decimal" placeholder="53000"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="fi"><label>Contracts</label><input id="na-ct" type="number" inputmode="decimal" min="1" placeholder="4"></div>
+      <div class="fi"><label>TP Low ATR (pts)</label><input id="na-tpl" type="number" inputmode="decimal" placeholder="37.5"></div>
+      <div class="fi"><label>SL Low ATR (pts)</label><input id="na-sll" type="number" inputmode="decimal" placeholder="25"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi"><label>TP High ATR (pts)</label><input id="na-tph" type="number" inputmode="decimal" placeholder="75"></div>
+      <div class="fi"><label>SL High ATR (pts)</label><input id="na-slh" type="number" inputmode="decimal" placeholder="50"></div>
+    </div>
+    <div class="fi"><label>Card Color</label>
+      <div id="add-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"></div>
+    </div>
+    <div class="mbtns">
+      <button class="mcan" onclick="closeAdd()">Cancel</button>
+      <button class="msave" onclick="saveAdd()">Add Account</button>
     </div>
   </div>
 </div>
@@ -351,17 +404,98 @@ function toggleATR(id){state.atr[id]=state.atr[id]==='low'?'high':'low';ss();ren
 function toggleSusp(id){state.susp[id]=!state.susp[id];ss();render();}
 function resetDay(){if(!confirm('Reset all daily logs?'))return;state.pnl={t50:0,t150:0,s50:0};state.logs={t50:[],t150:[],s50:[]};state.susp={t50:false,t150:false,s50:false};state.atr={t50:'low',t150:'low',s50:'low'};state.last=new Date().toDateString();ss();render();}
 
+// Colors available for account cards
+const COLORS=['#00d4aa','#f59e0b','#6366f1','#ec4899','#f97316','#06b6d4','#a855f7','#84cc16'];
+function colorPicker(pickerId,selectedColor,onSelect){
+  const el=document.getElementById(pickerId);if(!el)return;
+  el.innerHTML=COLORS.map(c=>'<div onclick="'+onSelect+'(\''+c+'\')" style="width:28px;height:28px;border-radius:50%;background:'+c+';cursor:pointer;border:3px solid '+(c===selectedColor?'white':'transparent')+';transition:border .15s"></div>').join('');
+}
+let editColor='#00d4aa';
+let addColor='#00d4aa';
+function setEditColor(c){editColor=c;colorPicker('color-picker',editColor,'setEditColor');}
+function setAddColor(c){addColor=c;colorPicker('add-color-picker',addColor,'setAddColor');}
+
 // Edit
 let editId=null;
-function openEdit(id){editId=id;const a=state.accounts.find(x=>x.id===id);document.getElementById('eb').value=a.balance;document.getElementById('ef').value=a.rules.floor;document.getElementById('ed').value=a.rules.mdl;document.getElementById('et').value=a.rules.pt;document.getElementById('emod').style.display='flex';}
+function openEdit(id){
+  editId=id;
+  const a=state.accounts.find(x=>x.id===id);
+  editColor=a.color;
+  document.getElementById('emod-title').textContent='Update Account';
+  document.getElementById('ea-firm').value=a.firm;
+  document.getElementById('ea-size').value=a.size;
+  document.getElementById('eb').value=a.balance;
+  document.getElementById('ef').value=a.rules.floor;
+  document.getElementById('ed').value=a.rules.mdl;
+  document.getElementById('et').value=a.rules.pt;
+  document.getElementById('ea-ct').value=a.contracts;
+  document.getElementById('ea-tpl').value=a.tp.low;
+  document.getElementById('ea-sll').value=a.sl.low;
+  document.getElementById('ea-tph').value=a.tp.high;
+  document.getElementById('ea-slh').value=a.sl.high;
+  // Hide remove button for accounts that can't be removed if only 1 left
+  document.getElementById('emod-delete').style.display=state.accounts.length>1?'block':'none';
+  colorPicker('color-picker',editColor,'setEditColor');
+  document.getElementById('emod').style.display='flex';
+}
 function closeEdit(){document.getElementById('emod').style.display='none';editId=null;}
 function saveEdit(){
   const a=state.accounts.find(x=>x.id===editId);
+  a.firm=document.getElementById('ea-firm').value||a.firm;
+  a.size=parseFloat(document.getElementById('ea-size').value)||a.size;
   a.balance=parseFloat(document.getElementById('eb').value)||a.balance;
   a.rules.floor=parseFloat(document.getElementById('ef').value)||a.rules.floor;
   a.rules.mdl=parseFloat(document.getElementById('ed').value)||a.rules.mdl;
   a.rules.pt=parseFloat(document.getElementById('et').value)||a.rules.pt;
-  a.rules.mtd=a.size-a.rules.floor;closeEdit();ss();render();
+  a.rules.mtd=a.size-a.rules.floor;
+  a.contracts=parseInt(document.getElementById('ea-ct').value)||a.contracts;
+  a.tp.low=parseFloat(document.getElementById('ea-tpl').value)||a.tp.low;
+  a.sl.low=parseFloat(document.getElementById('ea-sll').value)||a.sl.low;
+  a.tp.high=parseFloat(document.getElementById('ea-tph').value)||a.tp.high;
+  a.sl.high=parseFloat(document.getElementById('ea-slh').value)||a.sl.high;
+  a.color=editColor;
+  closeEdit();ss();render();
+}
+function deleteAccount(){
+  if(state.accounts.length<=1){alert('Cannot remove the last account.');return;}
+  const a=state.accounts.find(x=>x.id===editId);
+  if(!confirm('Remove '+a.firm+' '+fmt(a.size)+'? This cannot be undone.'))return;
+  state.accounts=state.accounts.filter(x=>x.id!==editId);
+  delete state.pnl[editId];
+  delete state.logs[editId];
+  delete state.susp[editId];
+  delete state.atr[editId];
+  closeEdit();ss();render();
+}
+
+// Add account
+function openAdd(){
+  addColor='#00d4aa';
+  ['na-firm','na-size','na-bal','na-floor','na-mdl','na-pt','na-ct','na-tpl','na-sll','na-tph','na-slh'].forEach(id=>{document.getElementById(id).value='';});
+  colorPicker('add-color-picker',addColor,'setAddColor');
+  document.getElementById('amod').style.display='flex';
+}
+function closeAdd(){document.getElementById('amod').style.display='none';}
+function saveAdd(){
+  const firm=document.getElementById('na-firm').value.trim();
+  const size=parseFloat(document.getElementById('na-size').value);
+  const bal=parseFloat(document.getElementById('na-bal').value);
+  const floor=parseFloat(document.getElementById('na-floor').value);
+  const mdl=parseFloat(document.getElementById('na-mdl').value);
+  const pt=parseFloat(document.getElementById('na-pt').value);
+  const ct=parseInt(document.getElementById('na-ct').value)||1;
+  const tpl=parseFloat(document.getElementById('na-tpl').value)||37.5;
+  const sll=parseFloat(document.getElementById('na-sll').value)||25;
+  const tph=parseFloat(document.getElementById('na-tph').value)||75;
+  const slh=parseFloat(document.getElementById('na-slh').value)||50;
+  if(!firm||!size||!bal||!floor||!mdl||!pt){alert('Please fill in all required fields.');return;}
+  const id='acct_'+Date.now();
+  const newAcct={id,firm,size,balance:bal,color:addColor,contracts:ct,
+    rules:{mdl,floor,mtd:size-floor,pt},
+    tp:{low:tpl,high:tph},sl:{low:sll,high:slh}};
+  state.accounts.push(newAcct);
+  state.pnl[id]=0;state.logs[id]=[];state.susp[id]=false;state.atr[id]='low';
+  closeAdd();ss();render();
 }
 
 // Card
@@ -436,6 +570,7 @@ function render(){
     +'<div class="hr"><div class="ey">Portfolio P&L</div><div class="tpnl" style="color:'+pc+'">'+fmts(tot)+'</div><button class="rbtn" onclick="resetDay()">Reset Day</button></div></div>'
     +'<div class="pbar"><span style="font-size:10px;color:var(--m)">Trade Order ></span> '+pbar+'</div>'
     +'<div class="cards">'+srt.map((a,i)=>card(a,i+1)).join('')+'</div>'
+    +'<button onclick="openAdd()" style="width:100%;padding:14px;border-radius:12px;border:2px dashed var(--d);background:none;color:var(--m);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">+ Add Account</button>'
     +'<div class="panels">'+stratPanel()+'</div>'
     +'<div class="ftr">Balances save automatically - PO3 unlocks when funded - Tap edit to update balances daily</div>';
 }
