@@ -1,1 +1,287 @@
-hello
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Risk System">
+<title>MNQ Risk System</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #020617; --surface: #0f172a; --surface2: #1e293b; --border: #1e293b;
+    --text: #f1f5f9; --muted: #64748b; --dim: #334155;
+    --teal: #00d4aa; --amber: #f59e0b; --indigo: #6366f1;
+    --red: #ef4444; --green: #10b981; --pink: #ec4899;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; font-size: 13px; min-height: 100vh; padding: 12px; }
+  h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .eyebrow { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px; }
+
+
+/* Layout */ 
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; } 
+.header-right { text-align: right; } 
+.total-pnl { font-size: 22px; font-weight: 700; } 
+.reset-btn { background: none; border: none; color: var(--muted); font-family: inherit; font-size: 11px; cursor: pointer; margin-top: 4px; } 
+.reset-btn:active { color: var(--text); }
+
+/* Priority bar */ 
+.priority-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 14px; overflow-x: auto; white-space: nowrap; } 
+.priority-bar .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; } 
+.priority-item { display: flex; align-items: center; gap: 6px; } 
+.arrow { color: var(--dim); margin: 0 4px; }
+
+/* Cards */ 
+.cards { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 14px; } 
+@media (min-width: 700px) { .cards { grid-template-columns: repeat(3, 1fr); } } 
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Card header */ 
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; } 
+.firm-name { font-size: 16px; font-weight: 700; } 
+.firm-size { font-size: 12px; color: var(--muted); margin-left: 6px; } 
+.badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; } 
+.balance-big { font-size: 18px; font-weight: 700; } 
+.pnl-small { font-size: 11px; text-align: right; margin-top: 2px; }
+
+/* Badge */ 
+.badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid; font-weight: 600; } 
+.badge-eval   { background: rgba(245,158,11,0.15); color: var(--amber); border-color: rgba(245,158,11,0.4); } 
+.badge-critical { background: rgba(239,68,68,0.15); color: var(--red); border-color: rgba(239,68,68,0.4); } 
+.badge-elevated { background: rgba(249,115,22,0.15); color: #f97316; border-color: rgba(249,115,22,0.4); } 
+.badge-normal   { background: var(--surface2); color: var(--muted); border-color: var(--dim); } 
+.badge-conservative { background: rgba(99,102,241,0.15); color: var(--indigo); border-color: rgba(99,102,241,0.4); } 
+.badge-moderate { background: rgba(0,212,170,0.15); color: var(--teal); border-color: rgba(0,212,170,0.4); } 
+.badge-aggressive { background: rgba(239,68,68,0.15); color: var(--red); border-color: rgba(239,68,68,0.4); } 
+.badge-funded   { background: rgba(16,185,129,0.15); color: var(--green); border-color: rgba(16,185,129,0.4); }
+
+/* Meters */ 
+.meters { display: flex; flex-direction: column; gap: 8px; } 
+.meter-row { display: flex; flex-direction: column; gap: 3px; } 
+.meter-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); } 
+.meter-track { height: 5px; background: var(--surface2); border-radius: 99px; overflow: hidden; } 
+.meter-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+
+/* Strategy box */ 
+.strategy-box { background: var(--surface2); border: 1px solid var(--dim); border-radius: 10px; padding: 10px 12px; } 
+.strategy-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; } 
+.strategy-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; } 
+.strategy-name { font-size: 14px; font-weight: 700; } 
+.strategy-notes { font-size: 10px; color: var(--muted); margin-top: 3px; } 
+.strategy-sessions { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+/* Limit grid */ 
+.limits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } 
+.limit-box { background: var(--surface2); border: 1px solid var(--dim); border-radius: 8px; padding: 8px; text-align: center; } 
+.limit-label { font-size: 9px; color: var(--muted); margin-bottom: 2px; } 
+.limit-val { font-size: 18px; font-weight: 700; } 
+.limit-sub { font-size: 10px; color: var(--dim); margin-top: 1px; }
+
+/* Trade buttons */ 
+.trade-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } 
+.btn { padding: 12px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid; transition: opacity 0.15s; } 
+.btn:active { opacity: 0.7; } 
+.btn-win  { background: rgba(16,185,129,0.15); color: var(--green); border-color: rgba(16,185,129,0.4); } 
+.btn-loss { background: rgba(239,68,68,0.15);  color: var(--red);   border-color: rgba(239,68,68,0.4); } 
+.btn-undo { background: rgba(100,116,139,0.15); color: var(--muted); border-color: var(--dim); font-size: 11px; } 
+.done-banner { text-align: center; font-size: 11px; color: var(--red); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 10px; background: rgba(239,68,68,0.05); } 
+.suspend-banner { text-align: center; font-size: 11px; color: var(--muted); border: 1px solid var(--dim); border-radius: 8px; padding: 10px; cursor: pointer; }
+
+/* Bottom panels */ 
+.panels { display: grid; grid-template-columns: 1fr; gap: 12px; } 
+@media (min-width: 700px) { .panels { grid-template-columns: 1fr 1fr; } } 
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; } 
+.panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+
+/* Strategy grid */ 
+.strat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; } 
+.strat-btn { background: var(--surface2); border: 1px solid transparent; border-radius: 8px; padding: 10px; text-align: left; cursor: pointer; font-family: inherit; color: var(--text); transition: background 0.15s; } 
+.strat-btn:active { background: var(--dim); } 
+.strat-btn.active { border-color: currentColor; } 
+.strat-btn-name { font-size: 13px; font-weight: 700; } 
+.strat-btn-meta { display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; } 
+.strat-detail { background: var(--surface2); border: 1px solid var(--dim); border-radius: 8px; padding: 12px; } 
+.strat-detail-name { font-weight: 700; margin-bottom: 4px; } 
+.strat-detail-notes { font-size: 11px; color: var(--muted); margin-bottom: 4px; } 
+.strat-detail-sessions { font-size: 10px; color: var(--dim); }
+
+/* Rules */ 
+.rules-list { display: flex; flex-direction: column; gap: 10px; } 
+.rule-row { display: flex; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); } 
+.rule-row:last-child { border-bottom: none; padding-bottom: 0; } 
+.rule-title { font-size: 11px; font-weight: 700; color: var(--text); min-width: 110px; } 
+.rule-text { font-size: 10px; color: var(--muted); line-height: 1.5; }
+
+/* Edit modal */ 
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; } 
+.modal { background: var(--surface); border: 1px solid var(--dim); border-radius: 14px; padding: 20px; width: 100%; max-width: 360px; } 
+.modal h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; } 
+.field { margin-bottom: 12px; } 
+.field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; } 
+.field input { width: 100%; background: var(--surface2); border: 1px solid var(--dim); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: inherit; font-size: 14px; } 
+.field input:focus { outline: none; border-color: var(--teal); } 
+.modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; } 
+.modal-save { background: rgba(0,212,170,0.15); color: var(--teal); border: 1px solid rgba(0,212,170,0.4); border-radius: 8px; padding: 10px; font-family: inherit; font-weight: 700; cursor: pointer; } 
+.modal-cancel { background: var(--surface2); color: var(--muted); border: 1px solid var(--dim); border-radius: 8px; padding: 10px; font-family: inherit; cursor: pointer; }
+
+.footer { text-align: center; font-size: 10px; color: var(--dim); margin-top: 16px; } 
+.edit-link { color: var(--dim); font-size: 10px; text-decoration: underline; cursor: pointer; margin-left: 8px; } 
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+const MNQ_PER_POINT = 2; // $2 per point per contract
+
+const DEFAULT_ACCOUNTS = [
+  { id: "tradeify_50",  firm: "Tradeify",      size: 50000,  balance: 51676,  color: "#00d4aa", contracts: 4,
+< truncated lines 142-456 >
+        ⏸ Suspended — tap to resume
+      </div>` :
+    doneForDay ? `
+      <div class="done-banner">
+        Trade limit reached — done for the day<br>
+        <span style="color:var(--muted);font-size:10px;cursor:pointer" onclick="toggleSuspend('${acct.id}')">suspend manually</span>
+      </div>` : `
+
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--dim);border-radius:8px;padding:8px 12px">
+        <div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">ATR Mode · ${acct.contracts} contract${acct.contracts>1?'s':''}</div>
+          <div style="font-size:12px;font-weight:700;margin-top:2px">
+            ${atrMode = 'high'
+              ? `TP <span style="color:#10b981">${fmt(tvWin)}</span> · SL <span style="color:#ef4444">${fmt(Math.abs(tvLoss))}</span>`
+              : `TP <span style="color:#10b981">${fmt(tvWin)}</span> · SL <span style="color:#ef4444">${fmt(Math.abs(tvLoss))}</span>`}
+          </div>
+          <div style="font-size:10px;color:var(--dim)">${acct.tp[atrMode]}pt TP · ${acct.sl[atrMode]}pt SL</div>
+        </div>
+        <button onclick="toggleATR('${acct.id}')" style="background:${atrMode='high'?'rgba(245,158,11,0.15)':'rgba(99,102,241,0.15)'};border:1px solid ${atrMode='high'?'rgba(245,158,11,0.4)':'rgba(99,102,241,0.4)'};color:${atrMode='high'?'#f59e0b':'#6366f1'};border-radius:8px;padding:6px 12px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">
+          ATR ${atrMode = 'high' ? '≥20 ↓' : '<20 ↑'}
+        </button>
+      </div>
+
+      <div class="trade-btns">
+        <button class="btn btn-win"  onclick="logTrade('${acct.id}','win')">+ Win ${fmt(tvWin)}</button>
+        <button class="btn btn-loss" onclick="logTrade('${acct.id}','loss')">− Loss ${fmt(Math.abs(tvLoss))}</button>
+      </div>
+      ${logs.length > 0 ? `<button class="btn btn-undo" onclick="undoTrade('${acct.id}')">↩ Undo Last Trade</button>` : ''}
+      <div style="text-align:center;margin-top:-4px">
+        <span style="color:var(--dim);font-size:10px;cursor:pointer" onclick="toggleSuspend('${acct.id}')">suspend account</span>
+      </div>`
+    }
+  </div>`;
+}
+
+function renderStrategyPanel() {
+  const s = selectedStrat ? STRATEGIES.find(x => x.id = selectedStrat) : null;
+  const btns = STRATEGIES.map(st => `
+    <button class="strat-btn ${selectedStrat=st.id?'active':''}" style="color:${selectedStrat=st.id?({jj_simon:'#00d4aa',po3:'#f59e0b',orb:'#6366f1',crt:'#ec4899'}[st.id]):'inherit'}"
+      onclick="toggleStrat('${st.id}')">
+      <div class="strat-btn-name">${st.name}</div>
+      <div class="strat-btn-meta">
+        ${stratRiskBadge(st.risk)}
+        <span style="font-size:10px;color:var(--muted)">WR ${st.winRate}%</span>
+        <span style="font-size:10px;color:var(--muted)">${st.avgRR}R</span>
+      </div>
+    </button>`).join('');
+
+  const detail = s ? `
+    <div class="strat-detail">
+      <div class="strat-detail-name">${s.fullName}</div>
+      <div class="strat-detail-notes">${s.notes}</div>
+      <div class="strat-detail-sessions">Sessions: ${s.sessions.join(', ')}</div>
+    </div>` : '';
+
+  return `<div class="panel">
+    <div class="panel-title">Strategy Reference</div>
+    <div class="strat-grid">${btns}</div>
+    ${detail}
+  </div>`;
+}
+
+function renderRulesPanel() {
+  const rows = RULES.map(([t, r]) => `
+    <div class="rule-row">
+      <div class="rule-title">${t}</div>
+      <div class="rule-text">${r}</div>
+    </div>`).join('');
+  return `<div class="panel">
+    <div class="panel-title">Decision Rules</div>
+    <div class="rules-list">${rows}</div>
+  </div>`;
+}
+
+function render() {
+  const sorted = sortedAccounts();
+  const totalPnl = Object.values(state.pnl).reduce((a, b) => a + b, 0);
+  const pnlColor = totalPnl >= 0 ? '#00d4aa' : '#ef4444';
+  const today = new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+
+  const priorityBar = sorted.map((a, i) => `
+    <div class="priority-item">
+      <span style="color:var(--dim);font-size:10px">#${i+1}</span>
+      <span style="color:${a.color};font-weight:700">${a.firm} ${a.size/1000}K</span>
+      ${i < sorted.length-1 ? '<span class="arrow">→</span>' : ''}
+    </div>`).join('');
+
+  const cards = sorted.map((a, i) => renderCard(a, i+1)).join('');
+
+  document.getElementById('app').innerHTML = `
+    <div class="header">
+      <div>
+        <div class="eyebrow">MNQ Quantitative Risk System</div>
+        <h1>Trading Command Center</h1>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${today}</div>
+      </div>
+      <div class="header-right">
+        <div class="eyebrow">Portfolio P&L</div>
+        <div class="total-pnl" style="color:${pnlColor}">${fmtSigned(totalPnl)}</div>
+        <button class="reset-btn" onclick="resetDay()">↺ Reset Day</button>
+      </div>
+    </div>
+
+    <div class="priority-bar">
+      <span class="label">Trade Order →</span>
+      ${priorityBar}
+    </div>
+
+    <div class="cards">${cards}</div>
+
+    <div class="panels">
+      ${renderStrategyPanel()}
+      ${renderRulesPanel()}
+    </div>
+
+    <div class="footer">
+      Balances save automatically · ATR toggle controls exact TP/SL · Tap "edit" to update balances daily · MNQ $2/pt
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEdit()">
+      <div class="modal">
+        <h2>Update Account</h2>
+        <div class="field"><label>Current Balance ($)</label><input id="edit-balance" type="number" inputmode="decimal"></div>
+        <div class="field"><label>Drawdown Floor ($)</label><input id="edit-floor" type="number" inputmode="decimal"></div>
+        <div class="field"><label>Max Daily Loss ($)</label><input id="edit-daily" type="number" inputmode="decimal"></div>
+        <div class="field"><label>Pass Target Balance ($)</label><input id="edit-target" type="number" inputmode="decimal"></div>
+        <div class="modal-btns">
+          <button class="modal-cancel" onclick="closeEdit()">Cancel</button>
+          <button class="modal-save" onclick="saveEdit()">Save</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+render();
+</script>
+
+
+</body>
+</html>
