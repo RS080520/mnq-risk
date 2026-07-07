@@ -460,12 +460,15 @@ function deleteAccount(){
   if(state.accounts.length<=1){alert('Cannot remove the last account.');return;}
   const a=state.accounts.find(x=>x.id===editId);
   if(!confirm('Remove '+a.firm+' '+fmt(a.size)+'? This cannot be undone.'))return;
-  state.accounts=state.accounts.filter(x=>x.id!==editId);
-  delete state.pnl[editId];
-  delete state.logs[editId];
-  delete state.susp[editId];
-  delete state.atr[editId];
-  closeEdit();ss();render();
+  const removeId=editId;
+  closeEdit();
+  state.accounts=state.accounts.filter(x=>x.id!==removeId);
+  delete state.pnl[removeId];
+  delete state.logs[removeId];
+  delete state.susp[removeId];
+  delete state.atr[removeId];
+  ss();
+  try{render();}catch(e){window.location.reload();}
 }
 
 // Add account
@@ -570,8 +573,8 @@ function render(){
     +'<div class="hr"><div class="ey">Portfolio P&L</div><div class="tpnl" style="color:'+pc+'">'+fmts(tot)+'</div><button class="rbtn" onclick="resetDay()">Reset Day</button></div></div>'
     +'<div class="pbar"><span style="font-size:10px;color:var(--m)">Trade Order ></span> '+pbar+'</div>'
     +'<div class="cards">'+srt.map((a,i)=>card(a,i+1)).join('')+'</div>'
-    +'<button onclick="openAdd()" style="width:100%;padding:14px;border-radius:12px;border:2px dashed var(--d);background:none;color:var(--m);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">+ Add Account</button>'
     +'<div class="panels">'+stratPanel()+'</div>'
+    +'<button onclick="openAdd()" style="width:100%;padding:14px;border-radius:12px;border:2px dashed var(--d);background:none;color:var(--teal);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px;margin-bottom:14px">+ Add New Account</button>'
     +'<div class="ftr">Balances save automatically - PO3 unlocks when funded - Tap edit to update balances daily</div>';
 }
 
