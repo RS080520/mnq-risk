@@ -102,7 +102,7 @@ h1{font-size:20px;font-weight:700}
 .jepnl{font-size:16px;font-weight:700}
 .jemeta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .jenotes{font-size:11px;color:var(--m);margin-bottom:8px;line-height:1.5}
-.jescreenshot{width:100%;border-radius:8px;cursor:pointer;margin-bottom:6px}
+.jescreenshot{width:100%;max-height:120px;object-fit:cover;border-radius:8px;cursor:pointer;margin-bottom:6px}
 .jdelete{background:none;border:none;color:var(--d);font-size:10px;cursor:pointer;font-family:inherit;margin-top:4px}
 .jempty{text-align:center;color:var(--m);padding:40px;font-size:12px}
 .passed-banner{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);border-radius:10px;padding:10px 14px;text-align:center;color:var(--grn);font-weight:700;font-size:13px}
@@ -156,6 +156,16 @@ h1{font-size:20px;font-weight:700}
       </select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fi">
+        <label id="tj-pts-label">Actual Points</label>
+        <input id="tj-pts" type="number" inputmode="decimal" step="0.25" placeholder="e.g. 37.5" oninput="updatePnlPreview()">
+      </div>
+      <div class="fi">
+        <label>Estimated P&L</label>
+        <div id="tj-pnl-preview" style="background:var(--s2);border:1px solid var(--d);border-radius:8px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--m)">—</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="fi"><label>Entry Time</label><input id="tj-entry" type="time"></div>
       <div class="fi"><label>Exit Time</label><input id="tj-exit" type="time"></div>
     </div>
@@ -186,6 +196,12 @@ h1{font-size:20px;font-weight:700}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="fi"><label>Drawdown Floor ($)</label><input id="ef" type="number" inputmode="decimal"></div>
       <div class="fi"><label>Max Daily Loss ($)</label><input id="ed" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="fi"><label>Account Status</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button id="status-eval" onclick="setStatus('eval')" style="flex:1;padding:10px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.15);color:#f59e0b">EVAL</button>
+        <button id="status-funded" onclick="setStatus('funded')" style="flex:1;padding:10px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--d);background:var(--s2);color:var(--m)">FUNDED</button>
+      </div>
     </div>
     <div class="fi"><label>Pass Target Balance ($)</label><input id="et" type="number" inputmode="decimal"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -267,7 +283,7 @@ const P=2;
 const DA=[
   {id:"t50",firm:"Tradeify",size:50000,balance:51676,color:"#00d4aa",contracts:4,consistRule:40,rules:{mdl:1000,floor:48000,mtd:2000,pt:53000},tp:{low:37.5,high:75},sl:{low:25,high:50}},
   {id:"t150",firm:"Tradeify",size:150000,balance:145686,color:"#f59e0b",contracts:1,consistRule:40,rules:{mdl:3000,floor:145500,mtd:4500,pt:159000},tp:{low:37.5,high:75},sl:{low:25,high:50}},
-  {id:"s50",firm:"Shark Futures",size:50000,balance:52112,color:"#6366f1",contracts:5,consistRule:50,rules:{mdl:1000,floor:48000,mtd:2000,pt:53000},tp:{low:37.5,high:75},sl:{low:25,high:50}}
+  {id:"s50",firm:"Shark Futures",size:50000,balance:48680.70,color:"#6366f1",contracts:5,consistRule:50,funded:true,rules:{mdl:1000,floor:48000,mtd:2000,pt:53000},tp:{low:37.5,high:75},sl:{low:25,high:50}}
 ];
 
 // Pre-load real historical P&L from prop firm dashboards
@@ -330,7 +346,7 @@ function showPage(id,el){
 }
 
 // Logic
-function isFunded(a){return a.balance>=a.rules.pt;}
+function isFunded(a){return a.funded===true||a.balance>=a.rules.pt;}
 function buf(a){return a.balance-a.rules.floor;}
 function rl(a){const p=buf(a)/a.balance;if(p<0.005)return'critical';if(p<0.02)return'elevated';return'normal';}
 function tv(a,m){return{w:a.tp[m]*P*a.contracts,l:-(a.sl[m]*P*a.contracts)};}
@@ -419,15 +435,39 @@ let imgData=null;
 function openTrade(id,result){
   pendingTrade={id,result};imgData=null;
   const a=state.accounts.find(x=>x.id===id);
-  const{w,l}=tv(a,state.atr[id]||'low');
+  const atr=state.atr[id]||'low';
+  const defaultPts=result==='win'?a.tp[atr]:a.sl[atr];
+  const{w,l}=tv(a,atr);
   const amt=result==='win'?w:Math.abs(l);
-  document.getElementById('tmod-title').textContent=(result==='win'?'+ Win ':'- Loss ')+fmt(amt)+' — '+a.firm+' '+fmt(a.size);
+  document.getElementById('tmod-title').textContent=(result==='win'?'+ Win ':'- Loss ')+' — '+a.firm+' '+fmt(a.size);
+  document.getElementById('tj-pts-label').textContent='Actual Points '+(result==='win'?'(default: '+a.tp[atr]+'pt TP)':'(default: '+a.sl[atr]+'pt SL)');
+  document.getElementById('tj-pts').value=defaultPts;
+  document.getElementById('tj-pts').style.borderColor=result==='win'?'rgba(16,185,129,.4)':'rgba(239,68,68,.4)';
+  const preview=document.getElementById('tj-pnl-preview');
+  preview.textContent=(result==='win'?'+':'-')+'$'+amt.toFixed(2);
+  preview.style.color=result==='win'?'#10b981':'#ef4444';
   document.getElementById('tj-notes').value='';
   document.getElementById('tj-preview').style.display='none';
   document.getElementById('tj-file').value='';
   document.getElementById('tj-entry').value='';
   document.getElementById('tj-exit').value='';
   document.getElementById('tmod').style.display='flex';
+}
+
+function updatePnlPreview(){
+  const a=state.accounts.find(x=>x.id===pendingTrade.id);
+  if(!a)return;
+  const pts=parseFloat(document.getElementById('tj-pts').value);
+  if(isNaN(pts)||pts<=0){
+    document.getElementById('tj-pnl-preview').textContent='—';
+    document.getElementById('tj-pnl-preview').style.color='var(--m)';
+    return;
+  }
+  const dollar=pts*P*a.contracts;
+  const isWin=pendingTrade.result==='win';
+  const preview=document.getElementById('tj-pnl-preview');
+  preview.textContent=(isWin?'+':'-')+'$'+dollar.toFixed(2);
+  preview.style.color=isWin?'#10b981':'#ef4444';
 }
 function closeTrade(){document.getElementById('tmod').style.display='none';pendingTrade={id:null,result:null};imgData=null;}
 function previewImg(input){
@@ -452,7 +492,13 @@ function confirmTrade(){
   const pnl=state.pnl[id];const lm=lims(a,pnl);
   const ws=state.logs[id].filter(t=>t>0).length;const ls=state.logs[id].filter(t=>t<0).length;
   if(ws>=lm.w||ls>=lm.l){closeTrade();return;}
-  const atr=state.atr[id]||'low';const{w,l}=tv(a,atr);const d=result==='win'?w:l;
+  // Use actual points entered — default to TP/SL if blank
+  const atr=state.atr[id]||'low';
+  const enteredPts=parseFloat(document.getElementById('tj-pts').value);
+  const defaultPts=result==='win'?a.tp[atr]:a.sl[atr];
+  const pts=isNaN(enteredPts)||enteredPts<=0?defaultPts:enteredPts;
+  const dollar=pts*P*a.contracts;
+  const d=result==='win'?dollar:-dollar;
   state.pnl[id]+=d;state.logs[id].push(d);
   const entryTime=document.getElementById('tj-entry').value;
   const exitTime=document.getElementById('tj-exit').value;
@@ -463,7 +509,7 @@ function confirmTrade(){
     date:now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
     time:now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}),
     entryTime:entryTime?fmtTime(entryTime):'',exitTime:exitTime?fmtTime(exitTime):'',duration:duration||'',
-    account:a.firm+' '+fmt(a.size),accountId:id,result,amount:d,
+    account:a.firm+' '+fmt(a.size),accountId:id,result,amount:d,points:pts,
     strategy:document.getElementById('tj-strat').value,
     notes:document.getElementById('tj-notes').value,screenshot:imgData||null,atr
   };
@@ -486,10 +532,25 @@ function resetDay(){
   state.last=new Date().toDateString();ss();render();
 }
 
+let editStatus='eval';
+function setStatus(s){
+  editStatus=s;
+  const evalBtn=document.getElementById('status-eval');
+  const fundedBtn=document.getElementById('status-funded');
+  if(s==='funded'){
+    evalBtn.style.background='var(--s2)';evalBtn.style.color='var(--m)';evalBtn.style.borderColor='var(--d)';
+    fundedBtn.style.background='rgba(16,185,129,.15)';fundedBtn.style.color='#10b981';fundedBtn.style.borderColor='rgba(16,185,129,.4)';
+  }else{
+    fundedBtn.style.background='var(--s2)';fundedBtn.style.color='var(--m)';fundedBtn.style.borderColor='var(--d)';
+    evalBtn.style.background='rgba(245,158,11,.15)';evalBtn.style.color='#f59e0b';evalBtn.style.borderColor='rgba(245,158,11,.4)';
+  }
+}
+
 // Edit
 let editId=null;
 function openEdit(id){
   editId=id;const a=state.accounts.find(x=>x.id===id);editColor=a.color;
+  editStatus=isFunded(a)?'funded':'eval';
   document.getElementById('ea-firm').value=a.firm;
   document.getElementById('ea-size').value=a.size;
   document.getElementById('eb').value=a.balance;
@@ -504,6 +565,7 @@ function openEdit(id){
   document.getElementById('ea-slh').value=a.sl.high;
   document.getElementById('emod-delete').style.display=state.accounts.length>1?'block':'none';
   colorPicker('color-picker',editColor,'setEditColor');
+  setStatus(editStatus);
   document.getElementById('emod').style.display='flex';
 }
 function closeEdit(){document.getElementById('emod').style.display='none';editId=null;}
@@ -523,6 +585,7 @@ function saveEdit(){
   a.tp.high=parseFloat(document.getElementById('ea-tph').value)||a.tp.high;
   a.sl.high=parseFloat(document.getElementById('ea-slh').value)||a.sl.high;
   a.color=editColor;
+  a.funded=editStatus==='funded';
   closeEdit();ss();render();
 }
 function deleteAccount(){
@@ -771,7 +834,8 @@ function renderJournal(){
         +'<div class="jepnl" style="color:'+ac+'">'+fmts(j.amount)+'</div></div>'
         +'<div class="jemeta"><span class="bdg '+(j.result==='win'?'bfu':'bc')+'">'+(j.result==='win'?'WIN':'LOSS')+'</span>'
         +'<span class="bdg bn">'+j.strategy+'</span>'
-        +'<span class="bdg bn">ATR '+(j.atr==='high'?'>=20':'<20')+'</span></div>'
+        +'<span class="bdg bn">ATR '+(j.atr==='high'?'>=20':'<20')+'</span>'
+        +(j.points?'<span class="bdg bn">'+j.points+'pts</span>':'')+'</div>'
         +timeRow
         +(j.notes?'<div class="jenotes">'+j.notes+'</div>':'')
         +(j.screenshot?'<img class="jescreenshot" src="'+j.screenshot+'" onclick="lightbox(\''+j.screenshot+'\')" alt="Trade screenshot">':'')
